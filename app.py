@@ -1,8 +1,8 @@
 from flask import Flask, jsonify, request
-from config import config_by_env
-from db import init_db, db
-from models import MemberRaw, MemberDeidentified, MemberActivity, AuditLog
-from deidentify import init_deidentifier, get_deidentifier
+from app.config import config_by_env
+from app.db import init_db, db
+from app.models import MemberRaw, MemberDeidentified, MemberActivity, AuditLog
+from app.deidentify import init_deidentifier, get_deidentifier
 import logging
 import os
 
