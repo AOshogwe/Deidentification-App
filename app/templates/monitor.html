@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connection Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .form-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-title::before {
+            content: '⚙️';
+            font-size: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, select {
+            padding: 11px 14px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="password"] {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 11px 22px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .monitor-section {
+            display: none;
+        }
+
+        .monitor-section.active {
+            display: block;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #dee2e6;
+        }
+
+        .status-card.connected::before {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-card.disconnected::before {
+            background: #ef4444;
+        }
+
+        .status-card.warning::before {
+            background: #f59e0b;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .status-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .status-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .badge-connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .info-label {
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #1f2937;
+            font-family: 'Courier New', monospace;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        .timeline {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .timeline-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .timeline-title::before {
+            content: '📊';
+            font-size: 18px;
+        }
+
+        .timeline-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border-left: 3px solid #667eea;
+            padding-left: 15px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 2px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 2px solid white;
+        }
+
+        .timeline-item.success {
+            color: #10b981;
+        }
+
+        .timeline-item.error {
+            color: #ef4444;
+        }
+
+        .timeline-item.warning {
+            color: #f59e0b;
+        }
+
+        .timeline-item.success::before {
+            background: #10b981;
+        }
+
+        .timeline-item.error::before {
+            background: #ef4444;
+        }
+
+        .timeline-item.warning::before {
+            background: #f59e0b;
+        }
+
+        .timeline-time {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-right: 8px;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .refresh-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 15px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 2px solid #e9ecef;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Database Connection Monitor</h1>
+            <p>Real-time monitoring dashboard for deidentification system</p>
+        </div>
+
+        <div class="content">
+            <!-- Error/Success Messages -->
+            <div class="error-message" id="errorMsg"></div>
+            <div class="success-message" id="successMsg"></div>
+
+            <!-- Configuration Form -->
+            <div class="form-section">
+                <div class="form-title">Database Configuration</div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="dbType">Database Type</label>
+                        <select id="dbType">
+                            <option value="postgresql">PostgreSQL</option>
+                            <option value="mysql">MySQL</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dbHost">Host</label>
+                        <input type="text" id="dbHost" placeholder="localhost or db.example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dbPort">Port</label>
+                        <input type="number" id="dbPort" placeholder="5432">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dbUser">Username</label>
+                        <input type="text" id="dbUser" placeholder="admin">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dbPassword">Password</label>
+                        <input type="password" id="dbPassword" placeholder="••••••••">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dbName">Database Name</label>
+                        <input type="text" id="dbName" placeholder="community_app">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="testConnection()">Test Connection</button>
+                    <button class="btn-secondary" onclick="saveConfig()">Save Configuration</button>
+                    <button class="btn-secondary" onclick="clearForm()">Clear</button>
+                </div>
+            </div>
+
+            <!-- Monitor Section (Hidden until connected) -->
+            <div class="monitor-section" id="monitorSection">
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="uptimeValue">—</div>
+                        <div class="stat-label">Uptime (hours)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="latencyValue">—</div>
+                        <div class="stat-label">Latency (ms)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="checksValue">0</div>
+                        <div class="stat-label">Health Checks</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="successRateValue">—%</div>
+                        <div class="stat-label">Success Rate</div>
+                    </div>
+                </div>
+
+                <!-- Status Cards -->
+                <div class="status-grid">
+                    <div class="status-card connected" id="connectionCard">
+                        <div class="status-label">Connection Status</div>
+                        <div class="status-title">Connected</div>
+                        <span class="status-badge badge-connected">✓ ACTIVE</span>
+                        <div class="status-info">
+                            <div class="info-row">
+                                <span class="info-label">Host:</span>
+                                <span class="info-value" id="statusHost">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Database:</span>
+                                <span class="info-value" id="statusDb">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Type:</span>
+                                <span class="info-value" id="statusType">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="status-card" id="poolCard">
+                        <div class="status-label">Connection Pool</div>
+                        <div class="status-title">Pool Status</div>
+                        <div class="status-info">
+                            <div class="info-row">
+                                <span class="info-label">Active:</span>
+                                <span class="info-value" id="poolActive">0</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Idle:</span>
+                                <span class="info-value" id="poolIdle">0</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Total:</span>
+                                <span class="info-value" id="poolTotal">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="status-card" id="tablesCard">
+                        <div class="status-label">Database Tables</div>
+                        <div class="status-title">Tables Status</div>
+                        <div class="status-info">
+                            <div class="info-row">
+                                <span class="info-label">members_raw:</span>
+                                <span class="info-value" id="tableRaw">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">members_deidentified:</span>
+                                <span class="info-value" id="tableDeidentified">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">member_activity:</span>
+                                <span class="info-value" id="tableActivity">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline">
+                    <div class="timeline-title">Connection Timeline</div>
+                    <div class="timeline-list" id="timeline"></div>
+                    <div class="refresh-indicator">
+                        <div class="spinner"></div>
+                        <span>Auto-refreshing every 10 seconds...</span>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="stopMonitoring()">Disconnect</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // Database Monitor Controller
+        // ============================================================================
+
+        let monitoringActive = false;
+        let monitorInterval = null;
+        let healthCheckCount = 0;
+        let successfulChecks = 0;
+        let connectionStartTime = null;
+        const timelineLimit = 20;
+        const timeline = [];
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Utility Functions
+        // ─────────────────────────────────────────────────────────────────────────
+
+        function showError(message) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('successMsg');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function getFormData() {
+            return {
+                dbType: document.getElementById('dbType').value,
+                dbHost: document.getElementById('dbHost').value,
+                dbPort: document.getElementById('dbPort').value,
+                dbUser: document.getElementById('dbUser').value,
+                dbPassword: document.getElementById('dbPassword').value,
+                dbName: document.getElementById('dbName').value,
+            };
+        }
+
+        function validateForm() {
+            const data = getFormData();
+            if (!data.dbHost || !data.dbPort || !data.dbUser || !data.dbName) {
+                showError('❌ Please fill in all required fields');
+                return false;
+            }
+            return true;
+        }
+
+        function saveConfig() {
+            if (!validateForm()) return;
+            const data = getFormData();
+            localStorage.setItem('dbConfig', JSON.stringify(data));
+            showSuccess('✓ Configuration saved successfully');
+        }
+
+        function loadConfig() {
+            const saved = localStorage.getItem('dbConfig');
+            if (saved) {
+                const data = JSON.parse(saved);
+                document.getElementById('dbType').value = data.dbType;
+                document.getElementById('dbHost').value = data.dbHost;
+                document.getElementById('dbPort').value = data.dbPort;
+                document.getElementById('dbUser').value = data.dbUser;
+                document.getElementById('dbName').value = data.dbName;
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('dbType').value = 'postgresql';
+            document.getElementById('dbHost').value = '';
+            document.getElementById('dbPort').value = '';
+            document.getElementById('dbUser').value = '';
+            document.getElementById('dbPassword').value = '';
+            document.getElementById('dbName').value = '';
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Connection Testing
+        // ─────────────────────────────────────────────────────────────────────────
+
+        async function testConnection() {
+            if (!validateForm()) return;
+
+            const data = getFormData();
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('/api/test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const latency = performance.now() - startTime;
+                const result = await response.json();
+
+                if (response.ok) {
+                    showSuccess(`✓ Connection successful! Latency: ${latency.toFixed(2)}ms`);
+                    addTimelineEntry('success', `Connected to ${data.dbHost}:${data.dbPort}/${data.dbName}`);
+                    startMonitoring(data, latency);
+                } else {
+                    showError(`❌ ${result.message || 'Connection failed'}`);
+                    addTimelineEntry('error', result.message || 'Connection test failed');
+                }
+            } catch (error) {
+                showError(`❌ Error: ${error.message}`);
+                addTimelineEntry('error', error.message);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Monitoring
+        // ─────────────────────────────────────────────────────────────────────────
+
+        function startMonitoring(dbConfig, initialLatency) {
+            if (monitoringActive) return;
+
+            monitoringActive = true;
+            connectionStartTime = Date.now();
+            healthCheckCount = 0;
+            successfulChecks = 0;
+            timeline.length = 0;
+
+            document.getElementById('monitorSection').classList.add('active');
+            updateStatusCards(dbConfig, initialLatency);
+
+            // Initial health check
+            performHealthCheck(dbConfig);
+
+            // Set up periodic health checks (every 10 seconds)
+            monitorInterval = setInterval(() => performHealthCheck(dbConfig), 10000);
+        }
+
+        function stopMonitoring() {
+            monitoringActive = false;
+            if (monitorInterval) clearInterval(monitorInterval);
+            document.getElementById('monitorSection').classList.remove('active');
+            showSuccess('✓ Monitoring stopped');
+        }
+
+        async function performHealthCheck(dbConfig) {
+            healthCheckCount++;
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('/api/health-check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dbConfig)
+                });
+
+                const latency = performance.now() - startTime;
+
+                if (response.ok) {
+                    successfulChecks++;
+                    updateStats(latency);
+                    updateConnectionCard('connected', latency);
+                    addTimelineEntry('success', `Health check passed (${latency.toFixed(0)}ms)`);
+                } else {
+                    updateConnectionCard('disconnected', latency);
+                    addTimelineEntry('error', 'Health check failed');
+                }
+            } catch (error) {
+                updateConnectionCard('disconnected', 0);
+                addTimelineEntry('error', `Connection lost: ${error.message}`);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // UI Updates
+        // ─────────────────────────────────────────────────────────────────────────
+
+        function updateStatusCards(dbConfig, latency) {
+            document.getElementById('statusHost').textContent = `${dbConfig.dbHost}:${dbConfig.dbPort}`;
+            document.getElementById('statusDb').textContent = dbConfig.dbName;
+            document.getElementById('statusType').textContent = dbConfig.dbType.toUpperCase();
+
+            // Mock pool data
+            document.getElementById('poolActive').textContent = Math.floor(Math.random() * 5) + 1;
+            document.getElementById('poolIdle').textContent = Math.floor(Math.random() * 3) + 2;
+            document.getElementById('poolTotal').textContent = '10';
+
+            // Mock table counts
+            document.getElementById('tableRaw').textContent = Math.floor(Math.random() * 1000) + 100;
+            document.getElementById('tableDeidentified').textContent = Math.floor(Math.random() * 900) + 50;
+            document.getElementById('tableActivity').textContent = Math.floor(Math.random() * 5000) + 500;
+        }
+
+        function updateStats(latency) {
+            const uptime = connectionStartTime ? ((Date.now() - connectionStartTime) / 3600000).toFixed(2) : '0';
+            document.getElementById('uptimeValue').textContent = uptime;
+            document.getElementById('latencyValue').textContent = latency.toFixed(1);
+            document.getElementById('checksValue').textContent = healthCheckCount;
+
+            const rate = healthCheckCount > 0 ? ((successfulChecks / healthCheckCount) * 100).toFixed(0) : '0';
+            document.getElementById('successRateValue').textContent = rate;
+        }
+
+        function updateConnectionCard(status, latency) {
+            const card = document.getElementById('connectionCard');
+            const title = card.querySelector('.status-title');
+            const badge = card.querySelector('.status-badge');
+
+            card.className = `status-card ${status}`;
+
+            if (status === 'connected') {
+                title.textContent = 'Connected';
+                badge.className = 'status-badge badge-connected';
+                badge.textContent = '✓ ACTIVE';
+            } else {
+                title.textContent = 'Disconnected';
+                badge.className = 'status-badge badge-disconnected';
+                badge.textContent = '✗ OFFLINE';
+            }
+        }
+
+        function addTimelineEntry(type, message) {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+
+            timeline.unshift({ type, message, time });
+            if (timeline.length > timelineLimit) timeline.pop();
+
+            const timelineList = document.getElementById('timeline');
+            timelineList.innerHTML = timeline.map(entry => `
+                <div class="timeline-item ${entry.type}">
+                    <span class="timeline-time">${entry.time}</span>
+                    ${entry.type === 'success' ? '✓' : entry.type === 'error' ? '✗' : '⚠'} ${entry.message}
+                </div>
+            `).join('');
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Initialization
+        // ─────────────────────────────────────────────────────────────────────────
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+        });
+    </script>
+</body>
+</html>
