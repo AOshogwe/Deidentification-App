@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deidentification Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 25px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .message {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            display: block;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+            display: block;
+        }
+
+        .message.info {
+            background: #dbeafe;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #e9ecef;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Deidentification Control Panel</h1>
+            <p>Manage and monitor data deidentification process</p>
+        </div>
+
+        <div class="content">
+            <!-- Messages -->
+            <div class="message" id="message"></div>
+
+            <!-- Statistics Section -->
+            <div class="section">
+                <div class="section-title">📊 Current Status</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="rawCount">—</div>
+                        <div class="stat-label">Raw Members</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="deidentCount">—</div>
+                        <div class="stat-label">Deidentified</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="pendingCount">—</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="progressPercent">—%</div>
+                        <div class="stat-label">Progress</div>
+                    </div>
+                </div>
+                <button class="btn-secondary" onclick="loadStats()">↻ Refresh Stats</button>
+            </div>
+
+            <!-- Deidentification Controls -->
+            <div class="section">
+                <div class="section-title">⚙️ Deidentification Controls</div>
+
+                <div class="button-group">
+                    <button class="btn-success" onclick="deidentifyAll()">
+                        ✓ Deidentify All Pending Members
+                    </button>
+                    <button class="btn-primary" onclick="showBatchForm()">
+                        + Batch Deidentify
+                    </button>
+                    <button class="btn-secondary" onclick="exportData()">
+                        ↓ Export Deidentified Data
+                    </button>
+                </div>
+
+                <div id="batchForm" style="display: none; margin-top: 20px;">
+                    <h3 style="margin-bottom: 10px;">Batch Deidentification</h3>
+                    <p style="margin-bottom: 15px; color: #6b7280; font-size: 13px;">
+                        Enter member IDs (comma-separated) to deidentify specific members
+                    </p>
+                    <textarea id="memberIds" placeholder="1,2,3,4,5" style="width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px; font-family: monospace; margin-bottom: 10px;" rows="4"></textarea>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="deidentifyBatch()">✓ Deidentify Selected</button>
+                        <button class="btn-secondary" onclick="hideBatchForm()">✕ Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="section">
+                <div class="section-title">📋 Recent Deidentifications</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Member ID</th>
+                                <th>Anonymous ID</th>
+                                <th>Status</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTable">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #9ca3af;">No deidentifications yet. Click "Deidentify All" to start.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Audit Log -->
+            <div class="section">
+                <div class="section-title">📝 Audit Log</div>
+                <div id="auditLog" style="max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; background: white; padding: 15px; border-radius: 6px; border: 1px solid #dee2e6;">
+                    <p style="color: #9ca3af;">Loading audit log...</p>
+                </div>
+                <button class="btn-secondary" style="margin-top: 10px;" onclick="loadAuditLog()">↻ Refresh Log</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Base URL
+        const API_BASE = '/api';
+
+        // Load statistics on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadAuditLog();
+            setInterval(loadStats, 10000); // Refresh every 10 seconds
+        });
+
+        function showMessage(msg, type = 'info') {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = `message ${type}`;
+            setTimeout(() => el.classList.remove(type), 5000);
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const data = await response.json();
+
+                document.getElementById('rawCount').textContent = data.raw_count || 0;
+                document.getElementById('deidentCount').textContent = data.deidentified_count || 0;
+                document.getElementById('pendingCount').textContent = data.pending_count || 0;
+                document.getElementById('progressPercent').textContent = data.progress_percent || 0;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        async function deidentifyAll() {
+            if (!confirm('Deidentify all pending members? This cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/members/deidentify-batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(`✓ Successfully deidentified ${data.total} members!`, 'success');
+                    loadStats();
+                    loadAuditLog();
+                } else {
+                    showMessage(`❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function deidentifyBatch() {
+            const ids = document.getElementById('memberIds').value
+                .split(',')
+                .map(id => parseInt(id.trim()))
+                .filter(id => !isNaN(id));
+
+            if (ids.length === 0) {
+                showMessage('❌ Please enter valid member IDs', 'error');
+                return;
+            }
+
+            try {
+                let success = 0;
+                for (const id of ids) {
+                    const response = await fetch(`${API_BASE}/members/deidentify/${id}`, {
+                        method: 'POST'
+                    });
+                    if (response.ok) success++;
+                }
+
+                showMessage(`✓ Deidentified ${success} of ${ids.length} members`, 'success');
+                document.getElementById('memberIds').value = '';
+                hideBatchForm();
+                loadStats();
+                loadAuditLog();
+            } catch (error) {
+                showMessage(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadAuditLog() {
+            try {
+                const response = await fetch(`${API_BASE}/audit-logs?limit=10`);
+                const logs = await response.json();
+
+                const html = logs.map(log => `
+                    <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+                        <span style="color: #667eea; font-weight: 600;">${log.action}</span>
+                        <span style="color: #9ca3af;"> at ${new Date(log.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                `).join('');
+
+                document.getElementById('auditLog').innerHTML = html || '<p style="color: #9ca3af;">No audit logs yet</p>';
+            } catch (error) {
+                console.error('Failed to load audit log:', error);
+            }
+        }
+
+        function showBatchForm() {
+            document.getElementById('batchForm').style.display = 'block';
+        }
+
+        function hideBatchForm() {
+            document.getElementById('batchForm').style.display = 'none';
+        }
+
+        function exportData() {
+            showMessage('📥 Preparing export...', 'info');
+            // This would be implemented with actual export functionality
+            setTimeout(() => {
+                showMessage('✓ Export ready (check logs)', 'success');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

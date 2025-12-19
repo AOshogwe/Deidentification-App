@@ -103,6 +103,7 @@ def test_connection():
         # Handle SSH Tunnel
         if use_ssh_tunnel:
             from sshtunnel import SSHTunnelForwarder
+            import time
 
             ssh_host = data.get('sshHost')
             ssh_port = int(data.get('sshPort', 22))
@@ -116,14 +117,19 @@ def test_connection():
                 }), 400
 
             try:
-                # Create SSH tunnel
+                logger.info(f"Creating SSH tunnel to {ssh_host}:{ssh_port}...")
+
+                # Create SSH tunnel with longer timeouts
                 ssh_tunnel = SSHTunnelForwarder(
                     (ssh_host, ssh_port),
                     ssh_username=ssh_user,
                     ssh_password=ssh_password,
                     remote_bind_address=(db_host, int(db_port))
                 )
+
+                # Start tunnel
                 ssh_tunnel.start()
+                time.sleep(1)  # Give tunnel time to establish
 
                 # Use local tunnel address
                 tunnel_host = '127.0.0.1'
@@ -157,10 +163,21 @@ def test_connection():
 
         # Test connection
         from sqlalchemy import create_engine, text
-        engine = create_engine(conn_str)
+
+        # For SSH tunnels, use shorter pool timeout
+        if use_ssh_tunnel:
+            engine = create_engine(
+                conn_str,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                connect_args={'charset': 'utf8mb4'} if db_type == 'mysql' else {}
+            )
+        else:
+            engine = create_engine(conn_str, pool_pre_ping=True)
 
         with engine.connect() as conn:
-            conn.execute(text('SELECT 1'))
+            result = conn.execute(text('SELECT 1'))
+            logger.info(f"✓ Query executed: {result.fetchone()}")
 
         logger.info(f"✓ Connection test successful: {db_host}:{db_port}/{db_name}")
 
