@@ -35,6 +35,16 @@ def monitor():
     return dashboard()
 
 
+@monitor_bp.route('/deidentify', methods=['GET'])
+def deidentify_panel():
+    """Serve the deidentification control panel"""
+    try:
+        return render_template('deidentify.html')
+    except Exception as e:
+        logger.error(f"Failed to render deidentify panel: {e}")
+        return jsonify({'error': 'Panel not found'}), 404
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # API ROUTES (Backend Endpoints)
 # ─────────────────────────────────────────────────────────────────────────
