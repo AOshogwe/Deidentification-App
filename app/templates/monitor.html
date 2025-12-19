@@ -710,7 +710,39 @@
                 document.getElementById('dbHost').value = data.dbHost;
                 document.getElementById('dbPort').value = data.dbPort;
                 document.getElementById('dbUser').value = data.dbUser;
+                document.getElementById('dbPassword').value = data.dbPassword;
                 document.getElementById('dbName').value = data.dbName;
+                document.getElementById('useSshTunnel').checked = data.useSshTunnel || false;
+                document.getElementById('sshHost').value = data.sshHost;
+                document.getElementById('sshPort').value = data.sshPort;
+                document.getElementById('sshUser').value = data.sshUser;
+                document.getElementById('sshPassword').value = data.sshPassword;
+
+                // Toggle SSH fields
+                const show = data.useSshTunnel || false;
+                document.getElementById('sshHostGroup').style.display = show ? 'flex' : 'none';
+                document.getElementById('sshPortGroup').style.display = show ? 'flex' : 'none';
+                document.getElementById('sshUserGroup').style.display = show ? 'flex' : 'none';
+                document.getElementById('sshPassGroup').style.display = show ? 'flex' : 'none';
+            } else {
+                // Auto-fill with cPanel example values
+                document.getElementById('dbType').value = 'mysql';
+                document.getElementById('dbHost').value = '127.0.0.1';
+                document.getElementById('dbPort').value = '3306';
+                document.getElementById('dbUser').value = 'adirqkww_test_user';
+                document.getElementById('dbPassword').value = '';
+                document.getElementById('dbName').value = 'adirqkww_community_test_db';
+                document.getElementById('useSshTunnel').checked = true;
+                document.getElementById('sshHost').value = '192.64.117.220';
+                document.getElementById('sshPort').value = '21098';
+                document.getElementById('sshUser').value = 'adirqkww';
+                document.getElementById('sshPassword').value = '';
+
+                // Show SSH fields by default
+                document.getElementById('sshHostGroup').style.display = 'flex';
+                document.getElementById('sshPortGroup').style.display = 'flex';
+                document.getElementById('sshUserGroup').style.display = 'flex';
+                document.getElementById('sshPassGroup').style.display = 'flex';
             }
         }
 
