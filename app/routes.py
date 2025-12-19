@@ -60,18 +60,25 @@ def health_check():
 @api_bp.route('/test-connection', methods=['POST'])
 def test_connection():
     """
-    Test database connection with provided credentials
+    Test database connection with optional SSH tunnel
 
     Expected JSON:
     {
-        "dbType": "postgresql" | "mysql",
+        "dbType": "mysql",
         "dbHost": "localhost",
-        "dbPort": 5432,
-        "dbUser": "admin",
-        "dbPassword": "password",
-        "dbName": "dbname"
+        "dbPort": 3306,
+        "dbUser": "user",
+        "dbPassword": "pass",
+        "dbName": "db",
+        "useSshTunnel": false,
+        "sshHost": "192.64.117.220",
+        "sshPort": 21098,
+        "sshUser": "username",
+        "sshPassword": "password"
     }
     """
+    ssh_tunnel = None
+
     try:
         data = request.get_json()
 
@@ -84,6 +91,7 @@ def test_connection():
         db_user = data.get('dbUser')
         db_password = data.get('dbPassword')
         db_name = data.get('dbName')
+        use_ssh_tunnel = data.get('useSshTunnel', False)
 
         # Validate input
         if not all([db_host, db_port, db_user, db_name]):
@@ -92,15 +100,57 @@ def test_connection():
                 'message': 'Missing required database credentials'
             }), 400
 
-        # URL-encode password to handle special characters
+        # Handle SSH Tunnel
+        if use_ssh_tunnel:
+            from sshtunnel import SSHTunnelForwarder
+
+            ssh_host = data.get('sshHost')
+            ssh_port = int(data.get('sshPort', 22))
+            ssh_user = data.get('sshUser')
+            ssh_password = data.get('sshPassword')
+
+            if not all([ssh_host, ssh_user, ssh_password]):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Missing SSH tunnel credentials'
+                }), 400
+
+            try:
+                # Create SSH tunnel
+                ssh_tunnel = SSHTunnelForwarder(
+                    (ssh_host, ssh_port),
+                    ssh_username=ssh_user,
+                    ssh_password=ssh_password,
+                    remote_bind_address=(db_host, int(db_port)),
+                    allow_agent=False,
+                    look_for_keys=False
+                )
+                ssh_tunnel.start()
+
+                # Use local tunnel address
+                tunnel_host = '127.0.0.1'
+                tunnel_port = ssh_tunnel.local_bind_port
+                logger.info(f"✓ SSH tunnel created on {tunnel_host}:{tunnel_port}")
+
+            except Exception as e:
+                logger.error(f"SSH tunnel failed: {e}")
+                return jsonify({
+                    'status': 'error',
+                    'message': f'SSH tunnel failed: {str(e)}'
+                }), 500
+        else:
+            tunnel_host = db_host
+            tunnel_port = db_port
+
+        # URL-encode credentials
         encoded_password = quote_plus(db_password)
         encoded_user = quote_plus(db_user)
 
         # Build connection string
         if db_type == 'postgresql':
-            conn_str = f'postgresql://{encoded_user}:{encoded_password}@{db_host}:{db_port}/{db_name}'
+            conn_str = f'postgresql://{encoded_user}:{encoded_password}@{tunnel_host}:{tunnel_port}/{db_name}'
         elif db_type == 'mysql':
-            conn_str = f'mysql+pymysql://{encoded_user}:{encoded_password}@{db_host}:{db_port}/{db_name}'
+            conn_str = f'mysql+pymysql://{encoded_user}:{encoded_password}@{tunnel_host}:{tunnel_port}/{db_name}'
         else:
             return jsonify({
                 'status': 'error',
@@ -121,7 +171,8 @@ def test_connection():
             'message': f'Successfully connected to {db_host}:{db_port}/{db_name}',
             'host': db_host,
             'database': db_name,
-            'type': db_type.upper()
+            'type': db_type.upper(),
+            'via_ssh': use_ssh_tunnel
         }), 200
 
     except Exception as e:
@@ -130,6 +181,15 @@ def test_connection():
             'status': 'error',
             'message': f'Connection failed: {str(e)}'
         }), 500
+
+    finally:
+        # Always close SSH tunnel if created
+        if ssh_tunnel:
+            try:
+                ssh_tunnel.stop()
+                logger.info("✓ SSH tunnel closed")
+            except Exception as e:
+                logger.error(f"Error closing SSH tunnel: {e}")
 
 
 @api_bp.route('/health-check', methods=['POST'])

@@ -505,6 +505,34 @@
                     </div>
                 </div>
 
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="useSshTunnel">🔒 Use SSH Tunnel?</label>
+                        <input type="checkbox" id="useSshTunnel" style="width: auto; margin-top: 8px;">
+                        <small style="color: #6b7280; margin-top: 4px; display: block;">Check if direct connection fails</small>
+                    </div>
+
+                    <div class="form-group" id="sshHostGroup" style="display: none;">
+                        <label for="sshHost">SSH Host</label>
+                        <input type="text" id="sshHost" placeholder="192.64.117.220">
+                    </div>
+
+                    <div class="form-group" id="sshPortGroup" style="display: none;">
+                        <label for="sshPort">SSH Port</label>
+                        <input type="number" id="sshPort" placeholder="21098">
+                    </div>
+
+                    <div class="form-group" id="sshUserGroup" style="display: none;">
+                        <label for="sshUser">SSH Username</label>
+                        <input type="text" id="sshUser" placeholder="adirqkww">
+                    </div>
+
+                    <div class="form-group" id="sshPassGroup" style="display: none;">
+                        <label for="sshPassword">SSH Password</label>
+                        <input type="password" id="sshPassword" placeholder="••••••••">
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button class="btn-primary" onclick="testConnection()">Test Connection</button>
                     <button class="btn-secondary" onclick="saveConfig()">Save Configuration</button>
@@ -650,6 +678,11 @@
                 dbUser: document.getElementById('dbUser').value,
                 dbPassword: document.getElementById('dbPassword').value,
                 dbName: document.getElementById('dbName').value,
+                useSshTunnel: document.getElementById('useSshTunnel').checked,
+                sshHost: document.getElementById('sshHost').value,
+                sshPort: document.getElementById('sshPort').value,
+                sshUser: document.getElementById('sshUser').value,
+                sshPassword: document.getElementById('sshPassword').value,
             };
         }
 
@@ -857,6 +890,15 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadConfig();
+
+            // SSH Tunnel toggle
+            document.getElementById('useSshTunnel').addEventListener('change', (e) => {
+                const show = e.target.checked;
+                document.getElementById('sshHostGroup').style.display = show ? 'flex' : 'none';
+                document.getElementById('sshPortGroup').style.display = show ? 'flex' : 'none';
+                document.getElementById('sshUserGroup').style.display = show ? 'flex' : 'none';
+                document.getElementById('sshPassGroup').style.display = show ? 'flex' : 'none';
+            });
         });
     </script>
 </body>
