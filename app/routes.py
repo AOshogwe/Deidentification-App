@@ -121,9 +121,7 @@ def test_connection():
                     (ssh_host, ssh_port),
                     ssh_username=ssh_user,
                     ssh_password=ssh_password,
-                    remote_bind_address=(db_host, int(db_port)),
-                    allow_agent=False,
-                    look_for_keys=False
+                    remote_bind_address=(db_host, int(db_port))
                 )
                 ssh_tunnel.start()
 
