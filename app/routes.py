@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 monitor_bp = Blueprint('monitor', __name__)
 
-
 # ─────────────────────────────────────────────────────────────────────────
 # MONITOR ROUTES (HTML Frontend)
 # ─────────────────────────────────────────────────────────────────────────
@@ -94,8 +93,10 @@ def test_connection():
         # Build connection string
         if db_type == 'postgresql':
             conn_str = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+            connect_args = {'connect_timeout': 10}
         elif db_type == 'mysql':
             conn_str = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+            connect_args = {'connect_timeout': 10}
         else:
             return jsonify({
                 'status': 'error',
@@ -104,7 +105,7 @@ def test_connection():
 
         # Test connection
         from sqlalchemy import create_engine, text
-        engine = create_engine(conn_str, connect_args={'timeout': 10})
+        engine = create_engine(conn_str, connect_args=connect_args)
 
         with engine.connect() as conn:
             conn.execute(text('SELECT 1'))

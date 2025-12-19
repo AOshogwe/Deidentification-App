@@ -26,7 +26,7 @@ class Config:
         'pool_size': 10,
         'pool_recycle': 3600,
         'pool_pre_ping': True,
-        'connect_args': {'timeout': 15}
+        'connect_args': {'connect_timeout': 15}
     }
 
     # ─────────────────────────────────────────────────────────────────
