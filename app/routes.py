@@ -76,6 +76,8 @@ def test_connection():
         data = request.get_json()
 
         # Extract credentials
+        from urllib.parse import quote_plus
+
         db_type = data.get('dbType', 'postgresql')
         db_host = data.get('dbHost')
         db_port = data.get('dbPort')
@@ -90,11 +92,15 @@ def test_connection():
                 'message': 'Missing required database credentials'
             }), 400
 
+        # URL-encode password to handle special characters
+        encoded_password = quote_plus(db_password)
+        encoded_user = quote_plus(db_user)
+
         # Build connection string
         if db_type == 'postgresql':
-            conn_str = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+            conn_str = f'postgresql://{encoded_user}:{encoded_password}@{db_host}:{db_port}/{db_name}'
         elif db_type == 'mysql':
-            conn_str = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+            conn_str = f'mysql+pymysql://{encoded_user}:{encoded_password}@{db_host}:{db_port}/{db_name}'
         else:
             return jsonify({
                 'status': 'error',
