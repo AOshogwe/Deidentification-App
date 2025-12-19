@@ -14,7 +14,11 @@ class Config:
     # DATABASE
     # ─────────────────────────────────────────────────────────────────
 
-    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///app.db')
+    # Use DATABASE_URL from environment, or default to SQLite for local dev
+    DATABASE_URL = os.getenv(
+        'DATABASE_URL',
+        'sqlite:///app.db'
+    )
 
     # Fix PostgreSQL URI scheme (psycopg2 → postgresql)
     if DATABASE_URL.startswith('postgres://'):
