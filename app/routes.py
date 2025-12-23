@@ -35,14 +35,14 @@ def monitor():
     return dashboard()
 
 
-@monitor_bp.route('/deidentify', methods=['GET'])
-def deidentify_panel():
-    """Serve the deidentification control panel"""
+@monitor_bp.route('/worker', methods=['GET'])
+def worker_status():
+    """Serve the worker status monitoring dashboard"""
     try:
-        return render_template('deidentify.html')
+        return render_template('worker_status.html')
     except Exception as e:
-        logger.error(f"Failed to render deidentify panel: {e}")
-        return jsonify({'error': 'Panel not found'}), 404
+        logger.error(f"Failed to render worker status page: {e}")
+        return jsonify({'error': 'Page not found'}), 404
 
 
 # ─────────────────────────────────────────────────────────────────────────
