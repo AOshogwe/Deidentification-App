@@ -537,9 +537,13 @@
 
         async function updateStatus() {
             try {
-                // For now, use mock data
-                // In production, replace with: const data = await fetch(`${API_BASE}/worker/status`).then(r => r.json());
-                const data = mockData;
+                // Call real API endpoint
+                const response = await fetch('/api/worker/status');
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to fetch worker status');
+                }
 
                 updateMetrics(data);
                 updateWorkerDetails(data);
@@ -548,6 +552,17 @@
                 updateLogs(data);
             } catch (error) {
                 console.error('Failed to update status:', error);
+                showError(error.message);
+            }
+        }
+
+        function showError(msg) {
+            const metricsEl = document.querySelector('.grid');
+            if (metricsEl) {
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = 'grid-column: 1 / -1; background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; padding: 15px; border-radius: 6px; margin-bottom: 20px;';
+                errorDiv.textContent = '⚠️ Error: ' + msg;
+                metricsEl.parentElement.insertBefore(errorDiv, metricsEl);
             }
         }
 
