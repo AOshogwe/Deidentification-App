@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker Status Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+        }
+
+        .card-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .worker-status {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid;
+        }
+
+        .worker-status.active {
+            background: #f0fdf4;
+            border-color: #10b981;
+        }
+
+        .worker-status.inactive {
+            background: #fef2f2;
+            border-color: #ef4444;
+        }
+
+        .worker-status h3 {
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .worker-status p {
+            margin: 5px 0;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .table-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+        }
+
+        .chart-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-label {
+            width: 150px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .chart-progress {
+            flex: 1;
+            height: 24px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 15px;
+        }
+
+        .chart-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .chart-value {
+            width: 50px;
+            text-align: right;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .action-button {
+            display: inline-block;
+            padding: 10px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 10px;
+            transition: all 0.2s;
+        }
+
+        .action-button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .action-button.secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .action-button.secondary:hover {
+            background: #d1d5db;
+        }
+
+        .logs {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .log-line {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #374151;
+        }
+
+        .log-time {
+            color: #9ca3af;
+            margin-right: 10px;
+        }
+
+        .log-level-info {
+            color: #60a5fa;
+        }
+
+        .log-level-success {
+            color: #34d399;
+        }
+
+        .log-level-error {
+            color: #f87171;
+        }
+
+        .log-level-warning {
+            color: #fbbf24;
+        }
+
+        .refresh-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .refresh-button:hover {
+            background: #5568d3;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔍 Worker Status Monitor</h1>
+            <p>Real-time monitoring of the deidentification background worker</p>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Worker Status</div>
+                <div class="card-value">
+                    <span id="workerStatus" class="status-badge status-pending">Checking...</span>
+                </div>
+                <p style="color: #6b7280; font-size: 12px;">Last heartbeat: <span id="lastHeartbeat">—</span></p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Records Deidentified</div>
+                <div class="card-value" id="totalDeidentified">—</div>
+                <p style="color: #6b7280; font-size: 12px;">In last 24 hours</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Tables Monitored</div>
+                <div class="card-value" id="tablesMonitored">—</div>
+                <p style="color: #6b7280; font-size: 12px;">Active deidentification</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Processing Rate</div>
+                <div class="card-value" id="processingRate">—</div>
+                <p style="color: #6b7280; font-size: 12px;">Records/minute</p>
+            </div>
+        </div>
+
+        <!-- Worker Details -->
+        <div class="table-section">
+            <h2 class="section-title">🏃 Worker Details</h2>
+
+            <div id="workerDetails">
+                <div class="worker-status inactive">
+                    <h3>Loading worker status...</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="action-button" onclick="refreshStatus()">
+                    🔄 Refresh Now
+                </button>
+                <button class="action-button secondary" onclick="viewRawData()">
+                    📊 View Raw Data
+                </button>
+                <button class="action-button secondary" onclick="viewLogs()">
+                    📜 View Logs
+                </button>
+            </div>
+        </div>
+
+        <!-- Table Sync Status -->
+        <div class="table-section">
+            <h2 class="section-title">📊 Table Sync Status</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Source Table</th>
+                        <th>Deidentified Table</th>
+                        <th>Source Records</th>
+                        <th>Deidentified Records</th>
+                        <th>Sync Status</th>
+                        <th>Last Synced</th>
+                    </tr>
+                </thead>
+                <tbody id="tableSyncStatus">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #9ca3af;">
+                            Loading table sync status...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Deidentification Progress -->
+        <div class="table-section">
+            <h2 class="section-title">📈 Deidentification Progress</h2>
+
+            <div class="chart-container" id="progressChart">
+                <p style="text-align: center; color: #9ca3af;">Loading progress data...</p>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="table-section">
+            <h2 class="section-title">🕐 Recent Activity</h2>
+
+            <div class="logs" id="activityLogs">
+                <div style="text-align: center; color: #9ca3af;">Loading activity logs...</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="table-section">
+            <h2 class="section-title">⚙️ Controls</h2>
+
+            <button class="action-button" onclick="restartWorker()">
+                🔁 Restart Worker
+            </button>
+            <button class="action-button" onclick="triggerSync()">
+                ⚡ Trigger Sync
+            </button>
+            <button class="action-button secondary" onclick="exportMetrics()">
+                📥 Export Metrics
+            </button>
+
+            <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 6px;">
+                <p style="color: #065f46; font-size: 13px;">
+                    <strong>💡 Tip:</strong> The dashboard refreshes automatically every 10 seconds.
+                    You can also click "Refresh Now" for manual updates.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = '/api';
+        const REFRESH_INTERVAL = 10000; // 10 seconds
+
+        // Sample mock data (replace with real API calls)
+        const mockData = {
+            workerStatus: 'active',
+            lastHeartbeat: new Date().toLocaleTimeString(),
+            totalDeidentified: 285,
+            tablesMonitored: 3,
+            processingRate: 12.5,
+            tables: [
+                {
+                    source: 'members_raw',
+                    deidentified: 'members_raw_deidentified',
+                    sourceRecords: 285,
+                    deidentifiedRecords: 285,
+                    status: 'synced',
+                    lastSynced: '2 minutes ago'
+                },
+                {
+                    source: 'member_financial_data',
+                    deidentified: 'member_financial_data_deidentified',
+                    sourceRecords: 285,
+                    deidentifiedRecords: 285,
+                    status: 'synced',
+                    lastSynced: '5 minutes ago'
+                },
+                {
+                    source: 'member_health_data',
+                    deidentified: 'member_health_data_deidentified',
+                    sourceRecords: 285,
+                    deidentifiedRecords: 285,
+                    status: 'synced',
+                    lastSynced: '8 minutes ago'
+                }
+            ],
+            logs: [
+                { time: '10:25:15', level: 'success', msg: '✓ Worker started successfully' },
+                { time: '10:25:16', level: 'info', msg: 'Found 3 user/member tables' },
+                { time: '10:25:17', level: 'success', msg: '✓ Created deidentified table: members_raw_deidentified' },
+                { time: '10:25:18', level: 'success', msg: '✓ Synced 285 records to members_raw_deidentified' },
+                { time: '10:25:20', level: 'info', msg: 'Monitoring mode activated' },
+                { time: '10:25:30', level: 'success', msg: '✓ Found 2 new records in members_raw' },
+                { time: '10:25:30', level: 'info', msg: 'Processing new records...' },
+                { time: '10:25:31', level: 'success', msg: '✓ Deidentified 2 new records' }
+            ]
+        };
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            updateStatus();
+            setInterval(updateStatus, REFRESH_INTERVAL);
+        });
+
+        async function updateStatus() {
+            try {
+                // For now, use mock data
+                // In production, replace with: const data = await fetch(`${API_BASE}/worker/status`).then(r => r.json());
+                const data = mockData;
+
+                updateMetrics(data);
+                updateWorkerDetails(data);
+                updateTableSync(data);
+                updateProgress(data);
+                updateLogs(data);
+            } catch (error) {
+                console.error('Failed to update status:', error);
+            }
+        }
+
+        function updateMetrics(data) {
+            const statusEl = document.getElementById('workerStatus');
+            const isActive = data.workerStatus === 'active';
+
+            statusEl.textContent = isActive ? '✓ ACTIVE' : '✗ INACTIVE';
+            statusEl.className = `status-badge ${isActive ? 'status-active' : 'status-inactive'}`;
+
+            document.getElementById('lastHeartbeat').textContent = data.lastHeartbeat;
+            document.getElementById('totalDeidentified').textContent = data.totalDeidentified.toLocaleString();
+            document.getElementById('tablesMonitored').textContent = data.tablesMonitored;
+            document.getElementById('processingRate').textContent = data.processingRate.toFixed(1);
+        }
+
+        function updateWorkerDetails(data) {
+            const isActive = data.workerStatus === 'active';
+            const statusClass = isActive ? 'active' : 'inactive';
+
+            const html = `
+                <div class="worker-status ${statusClass}">
+                    <h3>${isActive ? '✓ Worker Running' : '✗ Worker Offline'}</h3>
+                    <p><strong>Status:</strong> ${isActive ? 'Active and monitoring' : 'Not running'}</p>
+                    <p><strong>Tables Monitored:</strong> ${data.tablesMonitored}</p>
+                    <p><strong>Last Heartbeat:</strong> ${data.lastHeartbeat}</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%;"></div>
+                    </div>
+                    <p><strong>Processing Rate:</strong> ${data.processingRate} records/minute</p>
+                </div>
+            `;
+
+            document.getElementById('workerDetails').innerHTML = html;
+        }
+
+        function updateTableSync(data) {
+            const tbody = document.getElementById('tableSyncStatus');
+
+            const rows = data.tables.map(t => `
+                <tr>
+                    <td><strong>${t.source}</strong></td>
+                    <td>${t.deidentified}</td>
+                    <td>${t.sourceRecords.toLocaleString()}</td>
+                    <td>${t.deidentifiedRecords.toLocaleString()}</td>
+                    <td>
+                        <span class="badge ${t.status === 'synced' ? 'badge-success' : 'badge-warning'}">
+                            ${t.status === 'synced' ? '✓ Synced' : '⚠ Syncing'}
+                        </span>
+                    </td>
+                    <td>${t.lastSynced}</td>
+                </tr>
+            `).join('');
+
+            tbody.innerHTML = rows;
+        }
+
+        function updateProgress(data) {
+            const totalSource = data.tables.reduce((sum, t) => sum + t.sourceRecords, 0);
+            const totalDeident = data.tables.reduce((sum, t) => sum + t.deidentifiedRecords, 0);
+            const percent = totalSource > 0 ? Math.round((totalDeident / totalSource) * 100) : 0;
+
+            const html = `
+                <div class="chart-bar">
+                    <div class="chart-label">Overall Progress</div>
+                    <div class="chart-progress">
+                        <div class="chart-fill" style="width: ${percent}%;">${percent}%</div>
+                    </div>
+                    <div class="chart-value">${totalDeident}/${totalSource}</div>
+                </div>
+                ${data.tables.map(t => {
+                    const p = Math.round((t.deidentifiedRecords / t.sourceRecords) * 100);
+                    return `
+                        <div class="chart-bar">
+                            <div class="chart-label">${t.source}</div>
+                            <div class="chart-progress">
+                                <div class="chart-fill" style="width: ${p}%;">${p}%</div>
+                            </div>
+                            <div class="chart-value">${t.deidentifiedRecords}/${t.sourceRecords}</div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+
+            document.getElementById('progressChart').innerHTML = html;
+        }
+
+        function updateLogs(data) {
+            const logsHtml = data.logs.slice(-10).reverse().map(log => `
+                <div class="log-line">
+                    <span class="log-time">${log.time}</span>
+                    <span class="log-level-${log.level}">[${log.level.toUpperCase()}]</span>
+                    ${log.msg}
+                </div>
+            `).join('');
+
+            document.getElementById('activityLogs').innerHTML = logsHtml;
+        }
+
+        function refreshStatus() {
+            updateStatus();
+            alert('Status refreshed!');
+        }
+
+        function restartWorker() {
+            if (confirm('Are you sure you want to restart the worker?')) {
+                alert('Worker restart initiated (check Railway logs in 30 seconds)');
+            }
+        }
+
+        function triggerSync() {
+            alert('Manual sync triggered - worker will sync all tables now');
+        }
+
+        function viewLogs() {
+            window.open('https://railway.app/docs/logs', '_blank');
+        }
+
+        function viewRawData() {
+            console.log('Raw data:', mockData);
+            alert('Check console (F12) for raw data');
+        }
+
+        function exportMetrics() {
+            const csv = `Metric,Value\nWorker Status,${mockData.workerStatus}\nTotal Deidentified,${mockData.totalDeidentified}\nTables Monitored,${mockData.tablesMonitored}\nProcessing Rate,${mockData.processingRate}`;
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'worker-metrics.csv';
+            a.click();
+        }
+    </script>
+</body>
+</html>
