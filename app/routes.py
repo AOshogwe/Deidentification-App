@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Create blueprints
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+api_bp = Blueprint('api', __name__)
 monitor_bp = Blueprint('monitor', __name__)
 
 # ─────────────────────────────────────────────────────────────────────────
