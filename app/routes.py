@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, jsonify
 from app.db import db
 from app.models import MemberRaw, MemberDeidentified, MemberActivity, AuditLog
 from app.deidentify import get_deidentifier
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
