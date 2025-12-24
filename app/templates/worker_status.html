@@ -298,52 +298,63 @@
             padding: 15px;
             border-radius: 8px;
             font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 300px;
+            font-size: 11px;
+            max-height: 400px;
             overflow-y: auto;
             margin-bottom: 20px;
+            border: 1px solid #374151;
         }
 
         .error-log-item {
-            margin-bottom: 8px;
-            padding: 8px;
-            border-left: 3px solid;
-            padding-left: 10px;
+            margin-bottom: 12px;
+            padding: 10px;
+            border-left: 4px solid;
+            padding-left: 12px;
+            border-radius: 3px;
+            word-break: break-word;
+            line-height: 1.4;
         }
 
         .error-log-item.error-error {
             border-left-color: #f87171;
-            background: rgba(248, 113, 113, 0.1);
+            background: rgba(248, 113, 113, 0.15);
         }
 
         .error-log-item.error-warning {
             border-left-color: #fbbf24;
-            background: rgba(251, 191, 36, 0.1);
+            background: rgba(251, 191, 36, 0.15);
         }
 
         .error-log-item.error-info {
             border-left-color: #60a5fa;
-            background: rgba(96, 165, 250, 0.1);
+            background: rgba(96, 165, 250, 0.15);
         }
 
         .error-log-item.error-success {
             border-left-color: #34d399;
-            background: rgba(52, 211, 153, 0.1);
+            background: rgba(52, 211, 153, 0.15);
         }
 
         .error-time {
             color: #9ca3af;
-            margin-right: 10px;
+            margin-right: 8px;
+            font-weight: 600;
+            min-width: 70px;
+            display: inline-block;
         }
 
         .error-title {
             color: #f3f4f6;
             font-weight: 600;
-            margin-right: 10px;
+            margin-right: 8px;
+            display: inline-block;
         }
 
         .error-message {
             color: #d1d5db;
+            display: block;
+            margin-top: 4px;
+            margin-left: 79px;
         }
 
         .log-line {
@@ -603,64 +614,117 @@
 
         async function updateStatus() {
             try {
-                // Call real API endpoint
+                addErrorLog('API Call', `Fetching from: /api/worker/status`, 'info');
+
                 const response = await fetch('/api/worker/status');
+
+                addErrorLog('API Response', `Status Code: ${response.status}`, 'info');
+                addErrorLog('API Response', `Content-Type: ${response.headers.get('content-type')}`, 'info');
 
                 // Log the raw response for debugging
                 const responseText = await response.text();
-                console.log('Response Status:', response.status);
-                console.log('Response Type:', response.headers.get('content-type'));
-                console.log('Response Text:', responseText.substring(0, 200));
+
+                const responsePreview = responseText.substring(0, 500);
+                addErrorLog('API Response', `Raw Response (first 500 chars): ${responsePreview}`, 'info');
+                addErrorLog('API Response', `Total Response Length: ${responseText.length} bytes`, 'info');
+
+                // Check if response looks like HTML (error page)
+                if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
+                    addErrorLog('API Error', 'Server returned HTML instead of JSON - likely a 404 or 500 error', 'error');
+                    addErrorLog('API Error', `HTML Body: ${responseText.substring(0, 300)}...`, 'error');
+                    return;
+                }
+
+                // Check if response looks like plain text error
+                if (!responseText.startsWith('{')) {
+                    addErrorLog('API Error', `Response is not JSON - starts with: "${responseText.substring(0, 50)}"`, 'error');
+                    return;
+                }
 
                 // Try to parse as JSON
                 let data;
                 try {
                     data = JSON.parse(responseText);
+                    addErrorLog('API Response', 'Successfully parsed JSON', 'success');
                 } catch (parseError) {
-                    console.error('JSON Parse Error:', parseError);
-                    addErrorLog('API Error', `Invalid JSON response: ${responseText.substring(0, 100)}...`, 'error');
+                    addErrorLog('JSON Parse Error', `${parseError.message}`, 'error');
+                    addErrorLog('JSON Parse Error', `Failed to parse: ${responseText.substring(0, 100)}...`, 'error');
                     return;
                 }
 
-                if (!response.ok || data.error) {
-                    const errorMsg = data.error || 'Failed to fetch worker status';
-                    addErrorLog('API Error', errorMsg, 'error');
-                    throw new Error(errorMsg);
+                if (!response.ok) {
+                    const errorMsg = data.error || data.message || 'Unknown error';
+                    addErrorLog('API Error', `HTTP ${response.status}: ${errorMsg}`, 'error');
+                    if (data.traceback) {
+                        addErrorLog('API Error', `Stack: ${data.traceback.substring(0, 200)}...`, 'error');
+                    }
+                    return;
                 }
 
+                if (data.error) {
+                    const errorMsg = data.error;
+                    addErrorLog('API Error', errorMsg, 'error');
+                    return;
+                }
+
+                addErrorLog('API Success', `Loaded data for ${data.tables_monitored} tables with ${data.total_deidentified} deidentified records`, 'success');
                 clearErrorLog();
                 updateMetrics(data);
                 updateWorkerDetails(data);
                 updateTableSync(data);
                 updateProgress(data);
                 updateLogs(data);
-                addErrorLog('Status', 'Successfully updated worker status', 'success');
 
             } catch (error) {
-                console.error('Failed to update status:', error);
-                addErrorLog('Critical Error', error.message, 'error');
+                addErrorLog('JavaScript Error', error.toString(), 'error');
+                addErrorLog('JavaScript Error', `Stack: ${error.stack}`, 'error');
             }
         }
 
         function addErrorLog(title, message, type = 'info') {
             const errorContainer = document.getElementById('errorLog');
-            if (!errorContainer) return;
+            if (!errorContainer) {
+                console.error('Error log container not found!');
+                return;
+            }
 
             const timestamp = new Date().toLocaleTimeString();
             const errorItem = document.createElement('div');
             errorItem.className = `error-log-item error-${type}`;
+
+            // Truncate long messages but show more detail
+            let displayMessage = message;
+            if (message.length > 300) {
+                displayMessage = message.substring(0, 300) + '...';
+            }
+
             errorItem.innerHTML = `
                 <span class="error-time">${timestamp}</span>
-                <span class="error-title">${title}</span>
-                <span class="error-message">${message}</span>
+                <span class="error-title">[${type.toUpperCase()}]</span>
+                <span class="error-title">${title}:</span>
+                <span class="error-message">${escapeHtml(displayMessage)}</span>
             `;
+
+            // Add title tooltip with full message
+            if (message.length > 300) {
+                errorItem.title = message;
+            }
 
             errorContainer.insertBefore(errorItem, errorContainer.firstChild);
 
-            // Keep only last 20 logs
-            while (errorContainer.children.length > 20) {
+            // Keep only last 50 logs
+            while (errorContainer.children.length > 50) {
                 errorContainer.removeChild(errorContainer.lastChild);
             }
+
+            // Also log to console
+            console.log(`[${title}] ${message}`);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function clearErrorLog() {
