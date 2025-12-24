@@ -738,31 +738,40 @@
 
         function updateMetrics(data) {
             const statusEl = document.getElementById('workerStatus');
-            const isActive = data.workerStatus === 'active';
+            const isActive = data.worker_status === 'active';
 
             statusEl.textContent = isActive ? '✓ ACTIVE' : '✗ INACTIVE';
             statusEl.className = `status-badge ${isActive ? 'status-active' : 'status-inactive'}`;
 
-            document.getElementById('lastHeartbeat').textContent = data.lastHeartbeat;
-            document.getElementById('totalDeidentified').textContent = data.totalDeidentified.toLocaleString();
-            document.getElementById('tablesMonitored').textContent = data.tablesMonitored;
-            document.getElementById('processingRate').textContent = data.processingRate.toFixed(1);
+            // Handle snake_case or camelCase fields
+            const lastHeartbeat = data.last_heartbeat || data.lastHeartbeat || new Date().toLocaleTimeString();
+            const totalDeidentified = data.total_deidentified || data.totalDeidentified || 0;
+            const tablesMonitored = data.tables_monitored || data.tablesMonitored || 0;
+            const processingRate = data.processing_rate || data.processingRate || 0;
+
+            document.getElementById('lastHeartbeat').textContent = lastHeartbeat;
+            document.getElementById('totalDeidentified').textContent = (totalDeidentified || 0).toLocaleString();
+            document.getElementById('tablesMonitored').textContent = tablesMonitored;
+            document.getElementById('processingRate').textContent = (processingRate || 0).toFixed(1);
         }
 
         function updateWorkerDetails(data) {
-            const isActive = data.workerStatus === 'active';
+            const isActive = data.worker_status === 'active';
             const statusClass = isActive ? 'active' : 'inactive';
+            const tablesMonitored = data.tables_monitored || data.tablesMonitored || 0;
+            const lastHeartbeat = data.last_heartbeat || data.lastHeartbeat || new Date().toLocaleTimeString();
+            const processingRate = data.processing_rate || data.processingRate || 0;
 
             const html = `
                 <div class="worker-status ${statusClass}">
                     <h3>${isActive ? '✓ Worker Running' : '✗ Worker Offline'}</h3>
                     <p><strong>Status:</strong> ${isActive ? 'Active and monitoring' : 'Not running'}</p>
-                    <p><strong>Tables Monitored:</strong> ${data.tablesMonitored}</p>
-                    <p><strong>Last Heartbeat:</strong> ${data.lastHeartbeat}</p>
+                    <p><strong>Tables Monitored:</strong> ${tablesMonitored}</p>
+                    <p><strong>Last Heartbeat:</strong> ${lastHeartbeat}</p>
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: 100%;"></div>
                     </div>
-                    <p><strong>Processing Rate:</strong> ${data.processingRate} records/minute</p>
+                    <p><strong>Processing Rate:</strong> ${processingRate.toFixed(1)} records/minute</p>
                 </div>
             `;
 
@@ -772,18 +781,23 @@
         function updateTableSync(data) {
             const tbody = document.getElementById('tableSyncStatus');
 
+            if (!data.tables || data.tables.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #9ca3af;">No table data available</td></tr>';
+                return;
+            }
+
             const rows = data.tables.map(t => `
                 <tr>
-                    <td><strong>${t.source}</strong></td>
-                    <td>${t.deidentified}</td>
-                    <td>${t.sourceRecords.toLocaleString()}</td>
-                    <td>${t.deidentifiedRecords.toLocaleString()}</td>
+                    <td><strong>${t.source || 'Unknown'}</strong></td>
+                    <td>${t.deidentified || 'Unknown'}</td>
+                    <td>${(t.source_records || 0).toLocaleString()}</td>
+                    <td>${(t.deidentified_records || 0).toLocaleString()}</td>
                     <td>
                         <span class="badge ${t.status === 'synced' ? 'badge-success' : 'badge-warning'}">
                             ${t.status === 'synced' ? '✓ Synced' : '⚠ Syncing'}
                         </span>
                     </td>
-                    <td>${t.lastSynced}</td>
+                    <td>${t.last_synced ? new Date(t.last_synced).toLocaleTimeString() : 'Never'}</td>
                 </tr>
             `).join('');
 
@@ -791,8 +805,13 @@
         }
 
         function updateProgress(data) {
-            const totalSource = data.tables.reduce((sum, t) => sum + t.sourceRecords, 0);
-            const totalDeident = data.tables.reduce((sum, t) => sum + t.deidentifiedRecords, 0);
+            if (!data.tables || data.tables.length === 0) {
+                document.getElementById('progressChart').innerHTML = '<p style="text-align: center; color: #9ca3af;">No progress data available</p>';
+                return;
+            }
+
+            const totalSource = data.tables.reduce((sum, t) => sum + (t.source_records || 0), 0);
+            const totalDeident = data.tables.reduce((sum, t) => sum + (t.deidentified_records || 0), 0);
             const percent = totalSource > 0 ? Math.round((totalDeident / totalSource) * 100) : 0;
 
             const html = `
@@ -803,15 +822,15 @@
                     </div>
                     <div class="chart-value">${totalDeident}/${totalSource}</div>
                 </div>
-                ${data.tables.map(t => {
-                    const p = Math.round((t.deidentifiedRecords / t.sourceRecords) * 100);
+                ${(data.tables || []).map(t => {
+                    const p = totalSource > 0 ? Math.round(((t.deidentified_records || 0) / (t.source_records || 1)) * 100) : 0;
                     return `
                         <div class="chart-bar">
-                            <div class="chart-label">${t.source}</div>
+                            <div class="chart-label">${t.source || 'Unknown'}</div>
                             <div class="chart-progress">
                                 <div class="chart-fill" style="width: ${p}%;">${p}%</div>
                             </div>
-                            <div class="chart-value">${t.deidentifiedRecords}/${t.sourceRecords}</div>
+                            <div class="chart-value">${t.deidentified_records || 0}/${t.source_records || 0}</div>
                         </div>
                     `;
                 }).join('')}
@@ -821,15 +840,20 @@
         }
 
         function updateLogs(data) {
-            const logsHtml = data.logs.slice(-10).reverse().map(log => `
+            if (!data.recent_logs || data.recent_logs.length === 0) {
+                document.getElementById('activityLogs').innerHTML = '<p style="color: #9ca3af;">No recent activity logs</p>';
+                return;
+            }
+
+            const logsHtml = (data.recent_logs || []).slice(-10).reverse().map(log => `
                 <div class="log-line">
-                    <span class="log-time">${log.time}</span>
-                    <span class="log-level-${log.level}">[${log.level.toUpperCase()}]</span>
-                    ${log.msg}
+                    <span class="log-time">${log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '--:--:--'}</span>
+                    <span class="log-level-info">[${log.action ? log.action.toUpperCase() : 'INFO'}]</span>
+                    ${log.details || 'No details'}
                 </div>
             `).join('');
 
-            document.getElementById('activityLogs').innerHTML = logsHtml;
+            document.getElementById('activityLogs').innerHTML = logsHtml || '<p style="color: #9ca3af;">No logs to display</p>';
         }
 
         function refreshStatus() {
