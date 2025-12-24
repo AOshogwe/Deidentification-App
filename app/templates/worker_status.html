@@ -292,6 +292,60 @@
             line-height: 1.6;
         }
 
+        .error-log {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .error-log-item {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-left: 3px solid;
+            padding-left: 10px;
+        }
+
+        .error-log-item.error-error {
+            border-left-color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        .error-log-item.error-warning {
+            border-left-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .error-log-item.error-info {
+            border-left-color: #60a5fa;
+            background: rgba(96, 165, 250, 0.1);
+        }
+
+        .error-log-item.error-success {
+            border-left-color: #34d399;
+            background: rgba(52, 211, 153, 0.1);
+        }
+
+        .error-time {
+            color: #9ca3af;
+            margin-right: 10px;
+        }
+
+        .error-title {
+            color: #f3f4f6;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .error-message {
+            color: #d1d5db;
+        }
+
         .log-line {
             margin-bottom: 5px;
             padding-bottom: 5px;
@@ -356,6 +410,18 @@
         <div class="header">
             <h1>🔍 Worker Status Monitor</h1>
             <p>Real-time monitoring of the deidentification background worker</p>
+        </div>
+
+        <!-- Error/Status Log -->
+        <div class="table-section" style="margin-bottom: 20px;">
+            <h2 class="section-title">🔧 System Log</h2>
+            <div class="error-log" id="errorLog">
+                <div class="error-log-item error-info">
+                    <span class="error-time">--:--:--</span>
+                    <span class="error-title">Initializing</span>
+                    <span class="error-message">Loading worker status...</span>
+                </div>
+            </div>
         </div>
 
         <!-- Key Metrics -->
@@ -539,30 +605,70 @@
             try {
                 // Call real API endpoint
                 const response = await fetch('/api/worker/status');
-                const data = await response.json();
 
-                if (!response.ok || data.error) {
-                    throw new Error(data.error || 'Failed to fetch worker status');
+                // Log the raw response for debugging
+                const responseText = await response.text();
+                console.log('Response Status:', response.status);
+                console.log('Response Type:', response.headers.get('content-type'));
+                console.log('Response Text:', responseText.substring(0, 200));
+
+                // Try to parse as JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    addErrorLog('API Error', `Invalid JSON response: ${responseText.substring(0, 100)}...`, 'error');
+                    return;
                 }
 
+                if (!response.ok || data.error) {
+                    const errorMsg = data.error || 'Failed to fetch worker status';
+                    addErrorLog('API Error', errorMsg, 'error');
+                    throw new Error(errorMsg);
+                }
+
+                clearErrorLog();
                 updateMetrics(data);
                 updateWorkerDetails(data);
                 updateTableSync(data);
                 updateProgress(data);
                 updateLogs(data);
+                addErrorLog('Status', 'Successfully updated worker status', 'success');
+
             } catch (error) {
                 console.error('Failed to update status:', error);
-                showError(error.message);
+                addErrorLog('Critical Error', error.message, 'error');
             }
         }
 
-        function showError(msg) {
-            const metricsEl = document.querySelector('.grid');
-            if (metricsEl) {
-                const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = 'grid-column: 1 / -1; background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; padding: 15px; border-radius: 6px; margin-bottom: 20px;';
-                errorDiv.textContent = '⚠️ Error: ' + msg;
-                metricsEl.parentElement.insertBefore(errorDiv, metricsEl);
+        function addErrorLog(title, message, type = 'info') {
+            const errorContainer = document.getElementById('errorLog');
+            if (!errorContainer) return;
+
+            const timestamp = new Date().toLocaleTimeString();
+            const errorItem = document.createElement('div');
+            errorItem.className = `error-log-item error-${type}`;
+            errorItem.innerHTML = `
+                <span class="error-time">${timestamp}</span>
+                <span class="error-title">${title}</span>
+                <span class="error-message">${message}</span>
+            `;
+
+            errorContainer.insertBefore(errorItem, errorContainer.firstChild);
+
+            // Keep only last 20 logs
+            while (errorContainer.children.length > 20) {
+                errorContainer.removeChild(errorContainer.lastChild);
+            }
+        }
+
+        function clearErrorLog() {
+            const errorContainer = document.getElementById('errorLog');
+            if (errorContainer) {
+                // Remove error messages but keep last success
+                const errors = errorContainer.querySelectorAll('.error-error');
+                errors.forEach(e => e.remove());
             }
         }
 
